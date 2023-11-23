@@ -30,5 +30,93 @@ Plenty of useful information about your Introduction to Kafka with Spring Boot c
 * Visit us at [lydtechconsulting.com](https://www.lydtechconsulting.com/)
 * Visit our [LinkedIn](https://www.linkedin.com/company/lydtech-consulting) page
 
-## 강의내용 정리
-- [5. Coding Kafka with Spring Boot](docs/5.Coding%20Kafka%20with%20Spirng%20Boot.md)
+# 5. Coding Kafka with Spirng Boot
+
+## 1. Section Introduction
+---
+
+- Service Overview
+    - Repeatable pattern
+    - Common EDA implementation
+- Tech List
+    - Spring Boot 3
+    - Spring Kafka
+    - Java 17
+    - Maven 3.6+
+    - Lombok
+    - Kafka 3.3+
+        - Kraft O, Zookeeper X
+
+
+## 2. Creating The Project - Spring Initializr
+---
+
+https://github.com/lydtechconsulting/introduction-to-kafka-with-spring-boot
+
+
+## 3. The Consumer
+---
+
+- Add a consumer to the Dispatch Service
+- Spring annotation
+    - `@KafkaListener`
+    - `@Component`
+    - `@Service`
+- Application properties - Deserialization
+- Unit tests
+    - JUnit, Mockito
+- Command line invocation
+
+Console Producer -`order.created`-> Dispatch
+
+구현한 Consumer 서버를 구동시키고 카프카 테스트 메세지 전송
+```bash
+$ bin/kafka-console-producer.sh --topic order.created --bootstrap-server localhost:9092
+
+> test message
+```
+
+Consumer 메세지 응답
+```bash
+2023-11-23T22:01:58.204+09:00  INFO 62170 --- [merClient-0-C-1] d.l.d.handler.OrderCreatedHandler        : Received message: payload: test-message
+2023-11-23T22:02:07.685+09:00  INFO 62170 --- [merClient-0-C-1] d.l.d.handler.OrderCreatedHandler        : Received message: payload: test-message2
+```
+
+### Recap
+summing up
+
+- Added a consumer with `@KafkaListener`
+- Specified the deserialization configuration
+- verified with unit tests
+- Ran the end to end flow
+
+
+## 4. JSON Deserializer
+---
+
+- Change the Order Created event type to JSON
+- Create a POJO to represent the event
+- Update deserialization configuration in application.properties
+- Send a JSON event from the command line
+
+
+Console producer -`order.created`(JSON)-> Dispatch
+
+카프카 JSON 메세지 전송
+```bash
+$ bin/kafka-console-producer.sh --topic order.created --bootstrap-server localhost:9092
+
+>{"orderId": "7c4d32e9-4999-434b-953a-9467f09b023f","item":"item-1"}
+```
+
+Consumer JSON 메세지 응답
+```bash
+2023-11-23T23:06:37.135+09:00  INFO 62978 --- [merClient-0-C-1] d.l.d.handler.OrderCreatedHandler        : Received message: payload: OrderCreated(orderId=7c4d32e9-4999-434b-953a-9467f09b023f, item=item-1)
+```
+
+### Recap
+summing up
+
+- Added a class of type 'OrderCreated' to represent the event
+- Updated the deserialization configuration
+- Ran the end to end flow
