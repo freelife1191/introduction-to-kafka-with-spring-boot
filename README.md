@@ -120,3 +120,30 @@ summing up
 - Added a class of type 'OrderCreated' to represent the event
 - Updated the deserialization configuration
 - Ran the end to end flow
+
+
+## 5. Deserializer Error Handling
+---
+
+- Demonstrate deserialization errors
+- Handling deserialization errors
+- Use Spring Kafka's ErrorHandlingDeserializer
+
+Console producer -`order.created`(Invalid JSON)-> Dispatch
+
+잘못된 형식의 메세지를 전송하여 Consumer 역직렬화시 오류를 발생시킴
+```bash
+bin/kafka-console-producer.sh --topic order.created --bootstrap-server localhost:9092
+
+>{"orderId":"123","item":"invalid-1"}
+>{"orderId": "7c4d32e9-4999-434b-953a-9467f09b023f","item":"item-2"}
+>{"orderId":"123","item":"invalid-2"}
+```
+
+조치 후 Consumer에서 잘못된 형식의 메세지는 읽기에 실패하지만 다음 메세지를 문제없이 계속 받을 수 있음
+### Recap
+Summing up
+
+- Demonstrated a deserialization error
+- Updated the deserialization configuration
+- Observed invalid event handling
