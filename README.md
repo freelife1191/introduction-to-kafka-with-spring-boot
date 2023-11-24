@@ -190,7 +190,7 @@ Summing up
 - Automatic topic creation
   - Useful for local development & testing
 
-![](Pasted%20image%2020231124174057.png)
+![](attachements/section5/20231124174057.png)
 
 
 ### 자동 Topic 설정 기본값
@@ -267,3 +267,43 @@ Summing up
 
 - Used the command line tools to produce and consume events
 - Proved the full end to end flow works successfully
+
+
+# 6. Assignment - Tracking Service
+
+## Dispatch Tracking Service
+---
+- Dispatch Service
+  - https://github.com/freelife1191/introduction-to-kafka-with-spring-boot/tree/07-assignment-consume-and-produce
+- Traking Service
+  - https://github.com/freelife1191/introduction-to-kafka-with-spring-boot-tracking-service/tree/01-assignment-consume-and-produce
+
+이 과제에서는 'Tracking'이라는 새 서비스를 만들려고 합니다.
+
+_추적 서비스는 dispatch.tracking_ 주제 의 이벤트를 사용하여 상태를 확인 하고 디스패치의 현재 상태를 반영하는 이벤트를 생성합니다.
+
+![](attachements/section6/20231124230535.png)
+
+### Dispatch Service
+Dispatch Service to emit a DispatchPreparing event on a new topic named _dispatch.tracking_
+
+The payload for the DispatchPreparing event should look like:
+
+`orderId: UUID`
+
+
+### Tracking Service
+Create a new service named TrackingService.  Follow the same steps used to create the Dispatch Service.
+
+The Tracking Service should consume events from the _dispatch.tracking_ topic and emit a TrackingStatusUpdated event on a new topic named _tracking.status_.
+
+The payload for the TrackingStatusUpdated event should look like:
+
+1. orderId: UUID
+2. status: Status
+
+The enum should only contain a single value 'PREPARING' at this time
+
+
+### Testing
+Changes to both services should have unit test coverage.

@@ -1,10 +1,12 @@
 package dev.lydtech.dispatch.service;
 
+import dev.lydtech.dispatch.message.DispatchPreparing;
 import dev.lydtech.dispatch.message.OrderCreated;
 import dev.lydtech.dispatch.message.OrderDispatched;
 import dev.lydtech.dispatch.util.TestEventData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.Description;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.concurrent.CompletableFuture;
@@ -32,27 +34,42 @@ class DispatchServiceTest {
     }
 
     @Test
+    @Description("mockito를 사용하여 각 이벤트를 전송하는 이 호출이 실제로 한번 호출되는지 다시 확인")
     void process_Sucess() throws Exception {
-        // mockito를 사용하여 이벤트를 전송하는 이 호출이 실제로 한 번 호출되는지 다시 확인
+        when(kafkaProducerMock.send(anyString(), any(DispatchPreparing.class))).thenReturn(mock(CompletableFuture.class));
         when(kafkaProducerMock.send(anyString(), any(OrderDispatched.class))).thenReturn(mock(CompletableFuture.class));
 
         OrderCreated testEvent = TestEventData.buildOrderCreatedEvent(randomUUID(), randomUUID().toString());
         service.process(testEvent);
 
+        verify(kafkaProducerMock, times(1)).send(eq("dispatch.tracking"), any(DispatchPreparing.class));
         verify(kafkaProducerMock, times(1)).send(eq("order.dispatched"), any(OrderDispatched.class));
     }
 
     @Test
-    public void process_ProducerThrowsException() {
+    public void testProcess_DispatchTrackingProducerThrowsException() {
         OrderCreated testEvent = TestEventData.buildOrderCreatedEvent(randomUUID(), randomUUID().toString());
         // KafkaTemplate 생성시 오류가 발생할 경우
-        doThrow(new RuntimeException("Producer failure"))
-                .when(kafkaProducerMock).send(eq("order.dispatched"), any(OrderDispatched.class));
+        doThrow(new RuntimeException("dispatch tracking producer failure")).when(kafkaProducerMock).send(eq("dispatch.tracking"), any(DispatchPreparing.class));
 
         Exception exception = assertThrows(RuntimeException.class, () -> service.process(testEvent));
 
         // Broker를 사용할 수 없는 경우
+        verify(kafkaProducerMock, times(1)).send(eq("dispatch.tracking"), any(DispatchPreparing.class));
+        verifyNoMoreInteractions(kafkaProducerMock);
+        assertThat(exception.getMessage(), equalTo("dispatch tracking producer failure"));
+    }
+
+    @Test
+    public void testProcess_OrderDispatchedProducerThrowsException() {
+        OrderCreated testEvent = TestEventData.buildOrderCreatedEvent(randomUUID(), randomUUID().toString());
+        when(kafkaProducerMock.send(anyString(), any(DispatchPreparing.class))).thenReturn(mock(CompletableFuture.class));
+        doThrow(new RuntimeException("order dispatched producer failure")).when(kafkaProducerMock).send(eq("order.dispatched"), any(OrderDispatched.class));
+
+        Exception exception = assertThrows(RuntimeException.class, () -> service.process(testEvent));
+
+        verify(kafkaProducerMock, times(1)).send(eq("dispatch.tracking"), any(DispatchPreparing.class));
         verify(kafkaProducerMock, times(1)).send(eq("order.dispatched"), any(OrderDispatched.class));
-        assertThat(exception.getMessage(), equalTo("Producer failure"));
+        assertThat(exception.getMessage(), equalTo("order dispatched producer failure"));
     }
 }
