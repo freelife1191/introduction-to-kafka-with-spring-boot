@@ -147,3 +147,36 @@ Summing up
 - Demonstrated a deserialization error
 - Updated the deserialization configuration
 - Observed invalid event handling
+
+
+## 6. Spring Bean Configuration
+---
+
+- Define configuration programmatically
+  - KafkaListenerContainerFactory
+  - ConsumerFactory
+- Spring annotations
+  - `@Configuration`
+  - `@Bean`
+  - `@ComponentScan`
+  - `@Value`
+
+
+카프카 메세지 전송 테스트
+```bash
+bin/kafka-console-producer.sh --topic order.created --bootstrap-server localhost:9092
+
+>{"orderId": "7c4d32e9-4999-434b-953a-9467f09b023f","item":"item-3"}
+```
+
+Consumer 서버 로그
+```bash
+2023-11-24T17:18:17.661+09:00  INFO 69907 --- [merClient-0-C-1] d.l.d.handler.OrderCreatedHandler        : Received message: payload: OrderCreated(orderId=7c4d32e9-4999-434b-953a-9467f09b023f, item=item-3)
+```
+
+### Recap
+Summing up
+
+- Defined a Spring configuration class
+- Configured our Kafka listener
+- Verified via the command line
