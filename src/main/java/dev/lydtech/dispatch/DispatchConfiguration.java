@@ -2,16 +2,18 @@ package dev.lydtech.dispatch;
 
 import dev.lydtech.dispatch.message.OrderCreated;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.*;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,8 +26,8 @@ import java.util.Map;
 public class DispatchConfiguration {
 
     /**
-     * 문자열 키 유형 사용
      * 이벤트 키와 값에 사용할 일반 유형을 컨테이너 팩토리에 제공
+     * 문자열 키 유형 사용
      * @param consumerFactory
      * @return
      */
@@ -45,5 +47,24 @@ public class DispatchConfiguration {
         config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, OrderCreated.class.getCanonicalName()); // JsonDeserializer 역마샬링할 항목을 알 수 있도록 기본 값 이벤트 유형 추가
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class); // 키에 대한 문자열 역질렬 변환가 추가
         return new DefaultKafkaConsumerFactory<>(config);
+    }
+
+    /**
+     * 카프카 Producer에서 메세지를 전송 하기위해 사용하는 KafkaTemplate 미리 bean으로 설정해두고 사용
+     * @param producerFactory
+     * @return
+     */
+    @Bean
+    public KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+
+    @Bean
+    public ProducerFactory<String, Object> producerFactory(@Value("${kafka.bootstrap-servers}") String bootstrapServers) {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        return new DefaultKafkaProducerFactory<>(config);
     }
 }

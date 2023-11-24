@@ -180,3 +180,90 @@ Summing up
 - Defined a Spring configuration class
 - Configured our Kafka listener
 - Verified via the command line
+
+
+## 7. Create The Topics
+---
+
+자동 Topic 생성과 수동 Topic 생성 비교
+
+- Automatic topic creation
+  - Useful for local development & testing
+
+![](Pasted%20image%2020231124174057.png)
+
+
+### 자동 Topic 설정 기본값
+- Broker config: `auto.create.topics`
+  - Default: `true`
+- Consumer config: `allow.auto.create.topics`
+  - Default: `true`
+
+### 권장 설정
+- Manual topic creation (명령줄 도구를 통해 생성된 topic만 허용)
+  - Best practice for Production (and remote environments)
+  - 인증된 항목만 ACL을 사용하여 보호됨
+
+
+## 8. Produce
+---
+
+- Send an outbound JSON event **OrderDispatched**
+- Spring beans
+  - `KafkaTemplate`
+  - `ProducerFactory`
+
+Console producer -`order.created`-> Dispatch -`order.dispatched`->
+
+- Synchronous vs asynchronous send
+- Unhappy path unit tests
+
+
+### Rcap
+Summing up
+
+- DispatchService updated to send an OrderDispatched JSON event
+- Used KafkaTemplate to send the event
+- Added exception handling in the handler
+
+
+## 9. Consume Using CLI
+---
+
+Consume the Outbound Message on the Command Line
+
+- Run the end to end flow
+- Send an inbound event with the console-producer
+- Consume the outbound event with the console-consumer
+
+Console producer -`order.created`-> Dispatch -`order.dispatched`-> Console consumer
+
+카프카 서버 시작
+```bash
+$ bin/kafka-server-start.sh config/kraft/server.properties
+```
+
+카프카 Consumer 콘솔 실행 및 응답 확인
+```bash
+$ bin/kafka-console-consumer.sh --topic order.dispatched --bootstrap-server localhost:9092
+
+{"orderId":"7c4d32e9-4999-434b-953a-9467f09b023f"}
+```
+
+스프링 부트 서버 기동 메세지 응답 확인
+```bash
+Received message: payload: OrderCreated(orderId=7c4d32e9-4999-434b-953a-9467f09b023f, item=item-4)
+```
+
+카프카 Producer 콘솔 실행 및 메세지 전송
+```bash
+$ bin/kafka-console-producer.sh --topic order.created --bootstrap-server localhost:9092
+
+> {"orderId": "7c4d32e9-4999-434b-953a-9467f09b023f","item":"item-4"}
+```
+
+### Recap
+Summing up
+
+- Used the command line tools to produce and consume events
+- Proved the full end to end flow works successfully
