@@ -307,3 +307,67 @@ The enum should only contain a single value 'PREPARING' at this time
 
 ### Testing
 Changes to both services should have unit test coverage.
+
+### 질문 정답
+1. Did you first generate a skeletal project for the Tracking service which you then built out, and if so, how did you generate it?
+  - Spring Initializr could be used to generate the skeletal project as a starting point for the development of the Tracking service
+
+2. What Spring Kafka annotation did you use on the listen method on the Tracking service handler class for the DispatchPreparing event?
+  - Spring Kafka's KafkaListener annotation should be added to mark the listen method as the target for the DispatchPreparing event
+
+3. What class did you configure for the ConsumerFactory ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG and why?
+  - By configuring the deserializer as the ErrorHandlingDeserializer, it allows Spring Kafka to cleanly handle errors arising from deserializing invalid JSON messages
+
+4. What Spring Kafka class did you use to send out the TrackingStatusUpdated event?
+  - Spring Kafka's KafkaTemplate provides send methods to produce messages to Kafka
+
+
+# 7. Spring Boot Integration Test
+
+## Section Introduction
+
+- Integration Test Overview
+- Implement an integration test
+
+### Unit Test
+- Unit Tests are good
+  - Small
+  - Quick / easy to code
+  - Fast feedback
+- Prove units of code
+
+### Proving code unit integrations
+- Integration Testing
+  - Test flows
+  - Application context
+  - In-memory instances (DB, broker)
+  - Fast feedback
+  - Verify 3rd Party Integrations (e.g Kafka)
+
+## Integration Test
+Using Spring Boot Test for Integration testing
+
+![](attachements/section7/20231218220721.png)
+
+### Spring Boot Test
+
+- Build a Spring Boot Test
+  - `@SpringBootTest`
+  - `@ActiveProfiles`
+  - `@DirtiesContext`
+  - `@Autowired`
+  - `@EmbeddedKafka`
+
+### Test Helpers & Profile
+
+- JUnit & Awaitility
+- `application-test.properties`
+- `spring.embedded.kafka.brokers`
+
+## Recap
+Summing up
+
+- Built an integration test with Spring Boot Test
+- Used the embedded Kafka Broker
+- Used Kafka Template to send messages
+- Verified with two test consumers
