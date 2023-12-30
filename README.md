@@ -371,3 +371,138 @@ Summing up
 - Used the embedded Kafka Broker
 - Used Kafka Template to send messages
 - Verified with two test consumers
+
+
+
+## Section Introduction
+---
+## Consumer Groups
+Parallel Processing
+
+### In this section...
+- Throughput
+- Fault Tolerance
+- Scaling
+- Heartbeating
+- Rebalancing
+
+## Why Consumer Groups?
+- Isolation or Parallelism
+- Distinct Processing Logic
+  - ![](attachements/section8/20231230203926.png)
+  - Separate event streams
+  - ![](attachements/section8/20231230203957.png)
+- Throughput
+  - Single Consumer
+  - ![](attachements/section8/20231230204040.png)
+  - Multiplie Consumers
+  - Parallel Processing
+  - ![](attachements/section8/20231230204135.png)
+- Throughput & Scaling
+  - ![](attachements/section8/20231230204604.png)
+  - Max active consumers = num of partitions
+  - ![](attachements/section8/20231230204734.png)
+- Fault Tolerance
+  - Heartbeat
+  - Poll Interval
+  - ![](attachements/section8/20231230204819.png)
+  - ![](attachements/section8/20231230204842.png)
+- Fault Tolerance & Rebalancing
+  - New Consumer
+  - Dead Consumer
+  - Lost Consumer
+  - ![](attachements/section8/20231230204914.png)
+  - ![](attachements/section8/20231230204931.png)
+- Rebalancing
+  - Consumer Scaling
+    - Starting/Stopping Consumers
+  - Dead Consumer
+  - Lost Consumer
+  - ![](attachements/section8/20231230204944.png)
+### Summing up
+- Distinct & Parallel Processing
+- Fault Tolerance
+- Scaling
+- Rebalancing
+  - Heartbeat
+  - Polling Interval
+  - Rebalancing Strategy
+  - Pause in Processing
+
+
+# 8. Multiple Instance & Consumer Groups
+
+## Introduction to Consumer Group Exercises
+---
+Demonstrating the impact of Consumer Groups
+
+- Shared Consumer Group
+- Consumer Failover
+- Duplicate Consumption
+
+## Shared Consumer Group
+---
+Multiple consumers in the consumer group
+
+### in this module...
+- Run 2 instances of the application
+- Unique application Id for each
+  ![](attachements/section8/20231230214134.png)
+
+- Shared group Id
+- Single partition
+
+```bash
+bin/kafka-console-producer.sh --topic order.created --bootstrap-server localhost:9092
+>{"orderId": "7c4d32e9-4999-434b-953a-9467f09b023f","item":"item-5"}
+```
+
+## Recap
+Summing up
+
+- Demonstrated shared consumer group behaviour
+- Only one instance in a consumer group received the event
+
+
+## Demo Consumer Failover
+---
+Fault tolerance with consumer failover
+
+### in this module...
+- Kill the assigned consumer
+- Observe consumer group rebalance
+
+![](attachements/section8/20231230220332.png)
+
+## Recap
+Summing up
+
+- Demonstrated Consumer failover behaviour
+- The second consumer instance is assigned the partition
+
+## Duplicate Consumption
+---
+Multiple consumers in different consumer groups
+
+### In this module...
+- Run 2 instances of the application
+- Different group Ids
+- Both consumers assigned partition
+
+![](attachements/section8/20231230221239.png)
+
+## Recap
+Summing up
+
+- Demonstrated separate consumer group behaviour
+- 별도의 소비자 그룹 동작 시연
+- The instance in each consumer group received the event
+-   각 소비자 그룹의 인스턴스가 이벤트를 수신했다
+
+## Section Recap
+---
+## Consumer Group
+Summing up
+
+- Consumer groups are required for applications that need all of the messages from a topic
+- 주제의 모든 메시지가 필요한 애플리케이션에는 소비자 그룹이 필요하다

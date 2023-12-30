@@ -20,7 +20,7 @@ public class OrderCreatedHandler {
     @KafkaListener(
             id = "orderConsumerClient",
             topics = "order.created",
-            groupId = "dispatch.order.created.consumer",
+            groupId = "dispatch.order.created.consumer2", // groupId를 수정해서 서버를 구동하면 다른 소비자 그룹에 속한 서버를 구동할 수 있음
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void listen(OrderCreated payload) {
