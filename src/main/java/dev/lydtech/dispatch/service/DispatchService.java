@@ -28,12 +28,12 @@ public class DispatchService {
      * @param orderCreated
      * @throws Exception
      */
-    public void process(OrderCreated orderCreated) throws Exception {
+    public void process(String key, OrderCreated orderCreated) throws Exception {
         // DISPATCH_TRACKING_TOPIC 메세지 전송
         DispatchPreparing dispatchPreparing = DispatchPreparing.builder()
                 .orderId(orderCreated.getOrderId())
                 .build();
-        kafkaProducer.send(DISPATCH_TRACKING_TOPIC, dispatchPreparing).get();
+        kafkaProducer.send(DISPATCH_TRACKING_TOPIC, key, dispatchPreparing).get();
 
         // ORDER_DISPATCHED_TOPIC 메세지 전송
         OrderDispatched orderDispatched = OrderDispatched.builder()
@@ -42,9 +42,9 @@ public class DispatchService {
                 .notes("Dispatched: " + orderCreated.getItem())
                 .build();
         // 메세지를 전송하고 get을 호출하여 동기식으로 응답을 받을 수 있도록 설정
-        kafkaProducer.send(ORDER_DISPATCHED_TOPIC, orderDispatched).get();
+        kafkaProducer.send(ORDER_DISPATCHED_TOPIC, key, orderDispatched).get();
         // 주어진 주제 하나의 인스턴스에만 주제 파티션이 할당되고 다른 소비자는 남음
         // 연결된 인스턴스를 중단하면 유휴 인스턴스가 자동으로 연결되고 메세지를 소비하게됨
-        log.info("Sent messages: orderId: " + orderCreated.getOrderId() + " - processedById: " + APPLICATION_ID);
+        log.info("Sent messages: key: " + key + " - orderId: " + orderCreated.getOrderId() + " - processedById: " + APPLICATION_ID);
     }
 }

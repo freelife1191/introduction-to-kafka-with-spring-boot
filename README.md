@@ -506,3 +506,209 @@ Summing up
 
 - Consumer groups are required for applications that need all of the messages from a topic
 - 주제의 모든 메시지가 필요한 애플리케이션에는 소비자 그룹이 필요하다
+
+
+# 9. Keys, Partitions & Ordering
+
+Orderd Events
+
+## Section Introduction
+---
+### Keys, Partitions, but mainly Ordering
+in this section...
+
+- What is Ordering
+- Partitions revisited(파티션 재검토)
+- What Disrupts Ordering?(주문을 방해하는 요인은 무엇?)
+- How to Guarantee Ordering(주문 보장 방법)
+- Keys
+
+### What is Ordering?
+> Putting things into their correct place following a given rule
+> 주어진 규칙에 따라 물건을 올바른 위치에 놓기
+
+### Partitions
+- Topic comprises 1 or more Partitions(주제는 1개 이상의 파티션으로 구성)
+- More partitions = more throughput
+- More partitions = more overheads
+- Messages are written to an individual partition(메시지는 개별 파티션에 기록)
+- A partiton may have 0..1 consumers
+
+###  What Breaks Ordering
+
+![](attachements/section9/20231230235643.png)
+
+### How to Guarantee Ordering
+- Keys
+- Message Key = any type
+- Producer hashes key to determine the target partition(생산자는 대상 파티션을 결정하기 위해 키를 해시)
+  ![](attachements/section9/20231230235724.png)
+
+
+## Message Keys
+---
+Sending and receiving keyed messages
+
+### Message Keys
+In this module...
+
+- `@Header`
+  - `KafkaHeaders.RECEIVED_KEY`
+  - `KafkaHeaders.RECEIVED_PARTITION`
+- `@Payload`
+  ![](attachements/section9/20231231000212.png)
+
+### Recap
+Summing up
+
+- Sent and received keyed messages
+- Accessed key and partition headers
+
+
+## Consuming Keyed Messages
+---
+The relationship between keyed messages and partitions
+
+### Consuming Keyed Messages
+In this modules...
+
+- console-producer: include key
+- console-consumer: print key
+- Update partition count
+- Run the end to end flow
+
+![](attachements/section9/20231231092046.png)
+
+
+동일한 키로 생성된 메세지가 항상 동일한 파티션에 기록되는 지 테스트
+```bash
+$ bin/kafka-console-producer.sh --topic order.created --bootstrap-server localhost:9092 --property parse.key=true --property key.separator=:
+# 메세지 전송시 키를 헤더로 추가
+>"123":{"orderId": "7c4d32e9-4999-434b-953a-9467f09b0239","item":"item-9"}
+```
+
+컨슈머 명령도 수정
+```bash
+$ bin/kafka-console-consumer.sh --topic order.dispatched --bootstrap-server localhost:9092 --property parse.key=true --property key.separator=:
+```
+
+파티션수가 1인 것을 확인
+단일 파티션의 인덱스는 0
+```bash
+$ bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic order.created
+
+Topic: order.created    TopicId: u20yyFNUS4itknkaN32rbg PartitionCount: 1       ReplicationFactor: 1    Configs: 
+        Topic: order.created    Partition: 0    Leader: 1       Replicas: 1     Isr: 1
+```
+
+파티션을 5개로 업데이트
+```bash
+$ bin/kafka-topics.sh --bootstrap-server localhost:9092 --alter --topic order.created --partitions 5
+```
+
+파티션이 5개로 업데이트 된 것을 확인
+```bash
+$ bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic order.created
+
+Topic: order.created    TopicId: u20yyFNUS4itknkaN32rbg PartitionCount: 5       ReplicationFactor: 1    Configs: 
+        Topic: order.created    Partition: 0    Leader: 1       Replicas: 1     Isr: 1
+        Topic: order.created    Partition: 1    Leader: 1       Replicas: 1     Isr: 1
+        Topic: order.created    Partition: 2    Leader: 1       Replicas: 1     Isr: 1
+        Topic: order.created    Partition: 3    Leader: 1       Replicas: 1     Isr: 1
+        Topic: order.created    Partition: 4    Leader: 1       Replicas: 1     Isr: 1
+```
+
+첫번째 어플리케이션에 5개의 파티션이 모두 할당되는 것을 확인
+```bash
+dispatch.order.created.consumer2: partitions assigned: [order.created-0, order.created-1, order.created-2, order.created-3, order.created-4]
+```
+
+두번째 어플리케이션을 추가하면 0,1,2 세개의 파티션이 할당되고
+첫번째 어플리케이션에는 3,4 두개의 파티션이 재할당되는 것을 확인
+```bash
+# 두번째 어플리케이션 추가시 로그
+dispatch.order.created.consumer2: partitions assigned: [order.created-0, order.created-1, order.created-2]
+
+# 첫번째 어플리케이션 재할당 로그
+dispatch.order.created.consumer2: partitions assigned: [order.created-3, order.created-4]
+```
+
+컨슈머 그룹 확인
+```bash
+$ bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list 
+
+dispatch.order.created.consumer
+dispatch.order.created.consumer2
+```
+
+컨슈머 그룹 상세정보 확인(파티션 할당 현황)
+파티션 0에 10개의 레코드가 있음을 확인(단일 파티션만 있을 때 전송된 이벤트)
+```bash
+$ bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group dispatch.order.created.consumer
+
+GROUP                           TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                     HOST            CLIENT-ID
+dispatch.order.created.consumer order.created   0          10              10              0               consumer-dispatch.order.created.consumer-1-67ca087c-f00e-4e91-99a4-cd22251c6956 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   1          0               0               0               consumer-dispatch.order.created.consumer-1-67ca087c-f00e-4e91-99a4-cd22251c6956 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   2          0               0               0               consumer-dispatch.order.created.consumer-1-67ca087c-f00e-4e91-99a4-cd22251c6956 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   3          0               0               0               consumer-dispatch.order.created.consumer-1-a33a66fd-9f7c-478e-9ee3-ba95f433edb3 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   4          0               0               0               consumer-dispatch.order.created.consumer-1-a33a66fd-9f7c-478e-9ee3-ba95f433edb3 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+```
+
+동일한 메세지 전송시 할당된 파티션의 어플리케이션에서만 수신이 되는 것을 확인
+```bash
+$ bin/kafka-console-producer.sh --topic order.created --bootstrap-server localhost:9092 --property parse.key=true --property key.separator=:
+# 메세지 전송시 키를 헤더로 추가
+>"456":{"orderId": "7c4d32e9-4999-434b-953a-9467f09b0456","item":"item-with-key-456"}
+>"456":{"orderId": "7c4d32e9-4999-434b-953a-9467f09b0451","item":"item-with-key-456"}
+>"456":{"orderId": "7c4d32e9-4999-434b-953a-9467f09b0452","item":"item-with-key-456"}
+```
+
+다시 컨슈머 그룹 상세정보 확인(파티션3에 3개의 레코드가 기록된 것을 확인)
+오프셋이 로그 끝 오프셋과 일치하므로 어플리케이션에서 모두 소비되었음을 확인
+```bash
+$ bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group dispatch.order.created.consumer
+
+GROUP                           TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                     HOST            CLIENT-ID
+dispatch.order.created.consumer order.created   0          10              10              0               consumer-dispatch.order.created.consumer-1-67ca087c-f00e-4e91-99a4-cd22251c6956 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   1          0               0               0               consumer-dispatch.order.created.consumer-1-67ca087c-f00e-4e91-99a4-cd22251c6956 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   2          0               0               0               consumer-dispatch.order.created.consumer-1-67ca087c-f00e-4e91-99a4-cd22251c6956 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   3          3               3               0               consumer-dispatch.order.created.consumer-1-a33a66fd-9f7c-478e-9ee3-ba95f433edb3 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   4          0               0               0               consumer-dispatch.order.created.consumer-1-a33a66fd-9f7c-478e-9ee3-ba95f433edb3 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+```
+
+다른 메세지키로 전송시 첫번째 어플리케이션에서 이벤트를 모두 소비한 것을 확인
+```bash
+$ bin/kafka-console-producer.sh --topic order.created --bootstrap-server localhost:9092 --property parse.key=true --property key.separator=:
+# 메세지 전송시 키를 헤더로 추가
+>"789":{"orderId": "7c4d32e9-4999-434b-953a-9467f09b0789","item":"item-with-key-789"}
+>"789":{"orderId": "7c4d32e9-4999-434b-953a-9467f09b0781","item":"item-with-key-789"}
+>"789":{"orderId": "7c4d32e9-4999-434b-953a-9467f09b0782","item":"item-with-key-789"}
+```
+
+0번 파티션에 방금 전송한 3개의 레코드가 추가된 것을 확인
+```bash
+$ bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group dispatch.order.created.consumer
+
+GROUP                           TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                     HOST            CLIENT-ID
+dispatch.order.created.consumer order.created   0          13              13              0               consumer-dispatch.order.created.consumer-1-67ca087c-f00e-4e91-99a4-cd22251c6956 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   1          0               0               0               consumer-dispatch.order.created.consumer-1-67ca087c-f00e-4e91-99a4-cd22251c6956 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   2          0               0               0               consumer-dispatch.order.created.consumer-1-67ca087c-f00e-4e91-99a4-cd22251c6956 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   3          3               3               0               consumer-dispatch.order.created.consumer-1-a33a66fd-9f7c-478e-9ee3-ba95f433edb3 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+dispatch.order.created.consumer order.created   4          0               0               0               consumer-dispatch.order.created.consumer-1-a33a66fd-9f7c-478e-9ee3-ba95f433edb3 /172.18.0.1     consumer-dispatch.order.created.consumer-1
+```
+
+### Recap
+Summing up
+
+- Updated the partition count
+- Observed partition assignment
+- Observed keyed message behaviour
+
+### Keys, Partitions, and Ordering
+Summing up
+
+- Topics are composed of 1 or more partitions(토픽은 1개 이상의 파티션으로 구성)
+- Messages are written to a partition(메시지는 파티션에 기록)
+- To guarantee order(주문을 보장):
+  - Messages to be on the same partition(동일한 파티션에 있는 메시지)
+  - Achieved via Message Key(메시지 키를 통해 달성)
