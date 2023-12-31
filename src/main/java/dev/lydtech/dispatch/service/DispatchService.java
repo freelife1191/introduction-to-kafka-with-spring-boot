@@ -1,5 +1,6 @@
 package dev.lydtech.dispatch.service;
 
+import dev.lydtech.dispatch.client.StockServiceClient;
 import dev.lydtech.dispatch.message.DispatchCompleted;
 import dev.lydtech.dispatch.message.DispatchPreparing;
 import dev.lydtech.dispatch.message.OrderCreated;
@@ -24,6 +25,7 @@ public class DispatchService {
     private static final String ORDER_DISPATCHED_TOPIC = "order.dispatched";
     private static final UUID APPLICATION_ID = UUID.randomUUID();
     private final KafkaTemplate<String, Object> kafkaProducer;
+    private final StockServiceClient stockServiceClient;
 
     /**
      * KafkaTemplate에 미리 설정을 해두고 카프카 메세지 전송시 사용
@@ -31,6 +33,11 @@ public class DispatchService {
      * @throws Exception
      */
     public void process(String key, OrderCreated orderCreated) throws Exception {
+
+        String available = stockServiceClient.checkAvailability(orderCreated.getItem());
+        if(!Boolean.parseBoolean(available))
+            log.info("Item " + orderCreated.getItem() + " is unavailable.");
+
         // DISPATCH_TRACKING_TOPIC 메세지 전송
         DispatchPreparing dispatchPreparing = DispatchPreparing.builder()
                 .orderId(orderCreated.getOrderId())

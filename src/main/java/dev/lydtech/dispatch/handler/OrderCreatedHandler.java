@@ -1,5 +1,7 @@
 package dev.lydtech.dispatch.handler;
 
+import dev.lydtech.dispatch.exception.NotRetryableException;
+import dev.lydtech.dispatch.exception.RetryableException;
 import dev.lydtech.dispatch.message.OrderCreated;
 import dev.lydtech.dispatch.service.DispatchService;
 import lombok.RequiredArgsConstructor;
@@ -25,13 +27,18 @@ public class OrderCreatedHandler {
             topics = "order.created",
             groupId = "dispatch.order.created.consumer", // groupId를 수정해서 서버를 구동하면 다른 소비자 그룹에 속한 서버를 구동할 수 있음
             containerFactory = "kafkaListenerContainerFactory"
+            // autoStartup = "${configValue:false}"
     )
     public void listen(@Header(KafkaHeaders.RECEIVED_PARTITION) Integer partition, @Header(KafkaHeaders.RECEIVED_KEY) String key, @Payload OrderCreated payload) {
         log.info("Received message: partition: "+partition+" - key: " +key+ " - orderId: " + payload.getOrderId() + " - item: " + payload.getItem());
         try {
             dispatchService.process(key, payload);
+        }  catch (RetryableException e) {
+            log.warn("Retryable exception: " + e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("Processing failure", e);
+            log.error("NotRetryable exception: " + e.getMessage());
+            throw new NotRetryableException(e);
         }
     }
 }

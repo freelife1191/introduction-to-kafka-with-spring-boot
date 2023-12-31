@@ -4,3 +4,5 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
 #    exclude: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+dispatch:
+  stock-service-endpoint: http://localhost:9001/api/stock

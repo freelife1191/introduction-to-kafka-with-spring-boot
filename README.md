@@ -740,3 +740,148 @@ How to consume multiple event types from the same topic
   - Updated TrackingConfiguration
     - Removed default deserialisation type
     - Configured trusted packages
+
+
+# 12. Error Handling, Retry & Dead Letter Topic
+
+## Section Introduction
+---
+### ErrorHandling: Retry & DLT
+In this section...
+
+- Exception categories
+  - Not retryable exceptions(동일한 예외 재시도 하지 않음)
+  - Retryable exceptions
+
+![](attachements/section12/20231231142209.png)
+
+- Maximum retry attempts
+- Dead Letter Topics (DLT)
+
+![](attachements/section12/20231231142349.png)
+
+- Wiremock for testing
+
+
+## Wiremock Overview
+---
+An introduction to Wiremock
+
+- Library for stubbing a web service
+- Specify response for given REST request
+- Test with Spring Cloud Contract
+- Run as a standalone service
+- Facilitates component(구성 요소 테스트) / system testing(시스템 테스트)
+
+![](attachements/section12/20231231142648.png)
+
+
+## Retry: Introduction
+---
+### Retry
+Consumer retry behaviour
+
+- External REST call to Stock Service
+- Retry with Fixed Back Off
+
+![](attachements/section12/20231231144057.png)
+
+- Item availability check
+- Exception handling - RetryableException
+
+![](attachements/section12/20231231144844.png)
+
+- Integration testing
+- `@AutoConfigureWiremock` / `wiremock.server.port`
+
+![](attachements/section12/20231231145011.png)
+
+- Run end to end on the command line
+- Standalone wiremock
+
+![](attachements/section12/20231231145113.png)
+
+
+## Retry: Coding
+---
+
+### Retry: Coding & Unit Tests
+Implementing retry with Spring Kafka
+
+- Review code for Wiremock Call
+- Implement retry with Spring Kafka
+- Add code to call external service
+- Update unit tests
+
+## Retry: Integration Tests
+---
+Integration testing the retry behaviour
+
+- Use Wiremock for tests
+- Update happy path test
+- Test not-retryable exception flow
+- Test retryable exception flow
+
+
+## Retry: Debugging Integration Test
+---
+Stepping through the integration tests with the IDE debugger
+
+### Retry: Integration Test
+
+- Use the IDE debugger to step through tests
+- Add breakpoints at key points
+- Observe the retry behaviour
+
+
+## Retry: Command Line Demo
+---
+Running the end to end flow on the command line
+
+- Run the standalone Wiremock
+- Trigger different responses
+- Observe the behaviour
+
+Wiremock 설치 및 구동
+```bash
+$ git clone https://github.com/lydtechconsulting/introduction-to-kafka-wiremock
+$ cd introduction-to-kafka-wiremock
+$ curl https://repo1.maven.org/maven2/com/github/tomakehurst/wiremock-jre8-standalone/2.35.1/wiremock-jre8-standalone-2.35.1.jar > wiremock-jre8-standalone-2.35.1.jar
+$ java -jar wiremock-jre8-standalone-2.35.1.jar --port 9001
+```
+
+kafka 서버 구동
+```bash
+$ bin/kafka-server-start.sh config/kraft/server.properties
+```
+
+Application 구동
+```bash
+$ mvn sprin-boot:run
+```
+
+Consumer 구동
+```bash
+$ bin/kafka-console-consumer.sh --topic order.dispatched --bootstrap-server localhost:9092 --property parse.key=true --property key.separator=:
+```
+
+Producer 구동
+```bash
+$ bin/kafka-console-producer.sh --topic order.created --bootstrap-server localhost:9092 --property parse.key=true --property key.separator=:
+# 성공 처리
+>"200":{"orderId": "124d5289-d51b-4a50-8e6f-df536384dfde","item":"item_200"}
+# Bad Request 처리 재시도 초과로 실패처리
+>"400":{"orderId": "9b1e8169-d64a-44ad-9b67-3fdec06aa040","item":"item_400"}
+# Bad Gateway 재시도후 수신처리 
+>"502":{"orderId": "930d6fa0-1520-4392-a042-b1b830021389","item":"item_502"}
+```
+
+
+## Retry: Recap
+---
+Summing up
+
+- Added Fixed Back Off configuration
+- Added external service REST call
+- Updated integration tests
+- Ran the standalone wiremock
