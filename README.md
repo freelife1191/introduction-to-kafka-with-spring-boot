@@ -885,3 +885,37 @@ Summing up
 - Added external service REST call
 - Updated integration tests
 - Ran the standalone wiremock
+
+
+## Dead Letter Topics
+---
+Sending events to the Dead Letter Topic
+
+- Configure the dead letter topic
+  - DeadLetterPublishing Recoverer
+- Naming convention: `<original.topic>.DLT`
+- Verify with integration tests
+
+![](attachements/section12/20231231142349.png)
+
+### Recap
+Summing up
+
+- Added DLT configuration
+- Tested with integration tests
+- Stepped through the code
+
+
+## Section Recap
+---
+### Error Handling - Recap
+How we retried messages and used the Dead Letter Topic
+
+- Updated Dispatch Service to handle retryable and not retryable exceptions
+- 재시도 가능 및 재시도 불가능 예외를 처리하도록 업데이트된 디스패치 서비스
+- Configured retry
+  - Max retry attempts
+  - Interval between retries
+- Utilised a Dead Letter Topic
+- Integration tested with Spring Kafka Test
+- Used Wiremock to force error conditions

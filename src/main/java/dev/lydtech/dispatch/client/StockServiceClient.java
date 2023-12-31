@@ -34,8 +34,11 @@ public class StockServiceClient {
                 throw new RuntimeException("error " + response.getStatusCode());
             }
             return response.getBody();
-        } catch (HttpServerErrorException | ResourceAccessException e) {
-            log.warn("Failure calling external service", e);
+        } catch (HttpServerErrorException e) {
+            log.error("Server exception error code: " + e.getStatusCode(), e);
+            throw new RetryableException(e);
+        } catch (ResourceAccessException e) {
+            log.error("Resource access exception.", e);
             throw new RetryableException(e);
         } catch (Exception e) {
             log.error("Exception thrown: " + e.getClass().getName(), e);
