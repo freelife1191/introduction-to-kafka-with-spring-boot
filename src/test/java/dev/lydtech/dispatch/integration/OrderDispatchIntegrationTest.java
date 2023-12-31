@@ -1,6 +1,7 @@
 package dev.lydtech.dispatch.integration;
 
 import dev.lydtech.dispatch.DispatchConfiguration;
+import dev.lydtech.dispatch.message.DispatchCompleted;
 import dev.lydtech.dispatch.message.DispatchPreparing;
 import dev.lydtech.dispatch.message.OrderCreated;
 import dev.lydtech.dispatch.message.OrderDispatched;
@@ -10,8 +11,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.annotation.KafkaHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -25,6 +28,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -77,12 +81,14 @@ public class OrderDispatchIntegrationTest {
      * 수신된 이벤트 수 추적
      * Use this receiver to consume messages from the outbound topics.
      */
+    @KafkaListener(groupId = "KafkaIntegrationTest", topics = { DISPATCH_TRACKING_TOPIC, ORDER_DISPATCHED_TOPIC })
     public static class KafkaTestListener {
 
         AtomicInteger dispatchPreparingCounter = new AtomicInteger(0);
         AtomicInteger orderDispatchedCounter = new AtomicInteger(0);
+        AtomicInteger dispatchCompletedCounter = new AtomicInteger(0);
 
-        @KafkaListener(groupId = "KafkaIntegrationTest", topics = DISPATCH_TRACKING_TOPIC)
+        @KafkaHandler
         void receiveDispatchPreparing(@Header(KafkaHeaders.RECEIVED_KEY) String key, @Payload DispatchPreparing payload) {
             log.debug("Received DispatchPreparing key: " + key + " - payload: " + payload);
             assertThat(key, notNullValue());
@@ -90,12 +96,20 @@ public class OrderDispatchIntegrationTest {
             dispatchPreparingCounter.incrementAndGet();
         }
 
-        @KafkaListener(groupId = "KafkaIntegrationTest", topics = ORDER_DISPATCHED_TOPIC)
+        @KafkaHandler
         void receiveOrderDispatched(@Header(KafkaHeaders.RECEIVED_KEY) String key, @Payload OrderDispatched payload) {
             log.debug("Received OrderDispatched key: " + key + " - payload: " + payload);
             assertThat(key, notNullValue());
             assertThat(payload, notNullValue());
             orderDispatchedCounter.incrementAndGet();
+        }
+
+        @KafkaHandler
+        void receiveDispatchCompleted(@Header(KafkaHeaders.RECEIVED_KEY) String key, @Payload DispatchCompleted payload) {
+            log.debug("Received DispatchCompleted key: " + key + " - payload: " + payload);
+            assertThat(key, notNullValue());
+            assertThat(payload, notNullValue());
+            dispatchCompletedCounter.incrementAndGet();
         }
     }
 
@@ -105,15 +119,19 @@ public class OrderDispatchIntegrationTest {
         testListener.dispatchPreparingCounter.set(0);
         // 주문 배송 이벤트
         testListener.orderDispatchedCounter.set(0);
+        testListener.dispatchCompletedCounter.set(0);
 
-        // 연결한 임베디드 브로커가 작동할 때까지 기다림
-        // Wait until the partitions are assigned.
+        // Wait until the partitions are assigned.  The application listener container has one topic and the test
+        // 파티션이 할당될 때까지 기다림. 애플리케이션 리스너 컨테이너에는 하나의 주제와 테스트가 있음
+        // listener container has multiple topics, so take that into account when awaiting for topic assignment.
+        // 리스너 컨테이너에는 여러 주제가 있으므로 주제 할당을 기다릴 때 이를 고려
         // spring-kafka-test 3.1.0 에서 에러 발생
         // registry.getListenerContainers().stream().forEach(container ->
         //         ContainerTestUtils.waitForAssignment(container, embeddedKafkaBroker.getPartitionsPerTopic()));
         // https://stackoverflow.com/questions/69298878/integration-test-using-embeddedkafka-containertestutil-waitforassignment-throws
-        registry.getAllListenerContainers().stream().filter(c -> c.isAutoStartup()).forEach(
-                c -> ContainerTestUtils.waitForAssignment(c, 1));
+        registry.getAllListenerContainers().stream().filter(SmartLifecycle::isAutoStartup)
+                .forEach(container -> ContainerTestUtils.waitForAssignment(container,
+                        Objects.requireNonNull(container.getContainerProperties().getTopics()).length * embeddedKafkaBroker.getPartitionsPerTopic()));
     }
 
     /**
@@ -130,6 +148,9 @@ public class OrderDispatchIntegrationTest {
         // 100ms마다 확인하면서 최대 1초를 기다림
         await().atMost(1, TimeUnit.SECONDS).pollDelay(100, TimeUnit.MILLISECONDS)
                 .until(testListener.orderDispatchedCounter::get, equalTo(1));
+        // 100ms마다 확인하면서 최대 1초를 기다림
+        await().atMost(1, TimeUnit.SECONDS).pollDelay(100, TimeUnit.MILLISECONDS)
+                .until(testListener.dispatchCompletedCounter::get, equalTo(1));
     }
 
     private void sendMessage(String topic, String key, Object data) throws Exception {

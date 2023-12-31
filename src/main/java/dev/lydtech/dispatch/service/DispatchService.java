@@ -1,5 +1,6 @@
 package dev.lydtech.dispatch.service;
 
+import dev.lydtech.dispatch.message.DispatchCompleted;
 import dev.lydtech.dispatch.message.DispatchPreparing;
 import dev.lydtech.dispatch.message.OrderCreated;
 import dev.lydtech.dispatch.message.OrderDispatched;
@@ -8,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -43,6 +45,13 @@ public class DispatchService {
                 .build();
         // 메세지를 전송하고 get을 호출하여 동기식으로 응답을 받을 수 있도록 설정
         kafkaProducer.send(ORDER_DISPATCHED_TOPIC, key, orderDispatched).get();
+
+        DispatchCompleted dispatchCompleted = DispatchCompleted.builder()
+                .orderId(orderCreated.getOrderId())
+                .dispatchedDate(LocalDate.now().toString())
+                .build();
+        kafkaProducer.send(DISPATCH_TRACKING_TOPIC, key, dispatchCompleted).get();
+
         // 주어진 주제 하나의 인스턴스에만 주제 파티션이 할당되고 다른 소비자는 남음
         // 연결된 인스턴스를 중단하면 유휴 인스턴스가 자동으로 연결되고 메세지를 소비하게됨
         log.info("Sent messages: key: " + key + " - orderId: " + orderCreated.getOrderId() + " - processedById: " + APPLICATION_ID);

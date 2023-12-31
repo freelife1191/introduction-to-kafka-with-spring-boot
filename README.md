@@ -712,3 +712,31 @@ Summing up
 - To guarantee order(주문을 보장):
   - Messages to be on the same partition(동일한 파티션에 있는 메시지)
   - Achieved via Message Key(메시지 키를 통해 달성)
+
+
+# 10. Consuming Multiple Event Types
+
+## Section Introduction
+---
+How to consume multiple event types from the same topic
+동일한 주제에서 여러 이벤트 유형을 사용하는 방법
+
+### In this section...
+- Receive different event types from the same topic(동일한 주제에서 다양한 이벤트 유형 수신)
+  ![](attachements/section10/20231231103458.png)
+  ![](attachements/section10/20231231103541.png)
+
+- Update Tracking Service:
+  - Move `@KafkaListener` to class level
+  - Use `@KafkaHandler` on the method
+  - Remove default deserialisation type(기본 역직렬화 유형 제거)
+  - Use type header with trusted packages
+
+### Consumer Multiple Event Types Recap
+
+- Updated DispatchTrackingHandler
+  - `@KafkaHandler`
+  - `@KafkaListener`
+  - Updated TrackingConfiguration
+    - Removed default deserialisation type
+    - Configured trusted packages
